@@ -1,0 +1,3 @@
+.pio
+.cache/clangd/index
+compile_commands.json
