@@ -92,11 +92,13 @@ void reset() {
   digitalWrite(RESET, HIGH);
 }
 
-void changeMode(int mode) {
+void changeDataMode(int mode) {
   for (int i = 1; i <= 4; i++) {
     mcp0.pinMode(i, mode);
     mcp1.pinMode(i, mode);
   }
+
+  // delay(200);
 }
 
 void setup() {
@@ -147,6 +149,8 @@ void setup() {
       Serial.println("Detected LOW");
       delay(5000);
     } */
+  changeDataMode(OUTPUT);
+  writeDataBus(0x00);
 }
 
 bool firstRun = true;
@@ -155,13 +159,15 @@ void loop() {
     reset();
     count = 0;
     firstRun = false;
-  } 
+  }
 
-  changeMode(INPUT);
+  changeDataMode(INPUT);
 
   uint16_t a = readAddressBus();
 
-  changeMode(OUTPUT);
+  changeDataMode(OUTPUT);
+
+  // writeDataBus(0x00);
 
   if (a == 0x00) {
     writeDataBus(0xC3); // Unconditional JMP
@@ -176,8 +182,9 @@ void loop() {
     writeDataBus(0x00);
   }
 
-  Serial.printf("count: 0x%.4X\t address: 0x%.4X\n", count, a);
 
+  Serial.printf("count: 0x%.4X\t address: 0x%.4X         Diff: %d\n", count, a,
+                a - count);
 
   digitalWrite(READY, HIGH); //  Indicate memory is ready to 8085
 
@@ -186,7 +193,6 @@ void loop() {
     ;
 
   digitalWrite(READY, LOW);
-
 
   delay(100);
   count++;
