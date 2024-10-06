@@ -17,10 +17,33 @@
 #define IOM 2
 #define RESET 33
 
+#define RD 32
+#define WR 35
+
 int32_t count = 0;
 
 Adafruit_MCP23X17 mcp0;
 Adafruit_MCP23X17 mcp1;
+
+#define MEM_LEN 4096
+byte memory8085[MEM_LEN] = {0};
+
+byte readMemeory(uint16_t address) {
+  if (address > MEM_LEN) {
+    Serial.printf("Invalid readAddress 0x%.4X\n", address);
+    return 0;
+  } else {
+    return memory8085[address];
+  }
+}
+void writeMemory(uint16_t address, byte data) {
+  if (address > MEM_LEN) {
+    Serial.printf("Invalid writeAddress 0x%0.4X\n", address);
+  } else {
+    Serial.printf("Writing data: 0x%.2X\t at 0x%.4X\n", data, address);
+    memory8085[address] = data;
+  }
+}
 
 void writeDataBus(byte payload) {
   mcp1.digitalWrite(1, payload & 1);
@@ -70,8 +93,8 @@ uint16_t readAddressBus(bool debug = false) {
   return address;
 }
 
-uint16_t readDataBus(void) {
-  uint8_t payload = 0;
+byte readDataBus(void) {
+  byte payload = 0;
 
   payload |= (mcp1.digitalRead(1) << 0);
   payload |= (mcp1.digitalRead(2) << 1);
@@ -104,18 +127,16 @@ void changeDataMode(int mode) {
 void setup() {
   pinMode(READY, OUTPUT);
   digitalWrite(READY, LOW);
-  reset();
 
   Serial.begin(115200);
 
-  if (!mcp0.begin_I2C(0x20)) {
-    Serial.println("error in i2c    MCP0");
+  if (!mcp1.begin_I2C(0x21)) {
+    Serial.println("error in i2c   MCP1");
     while (true)
       ;
   }
-
-  if (!mcp1.begin_I2C(0x21)) {
-    Serial.println("error in i2c   MCP1");
+  if (!mcp0.begin_I2C(0x20)) {
+    Serial.println("error in i2c    MCP0");
     while (true)
       ;
   }
@@ -126,6 +147,10 @@ void setup() {
   digitalWrite(RESET, LOW);
   pinMode(IOM, INPUT);
 
+  // Magic number, no one knows how we got them
+  pinMode(RD, INPUT);
+  pinMode(WR, INPUT);
+
   // Pins 1 to 7
   for (int i = 8; i <= 14; i++) {
     mcp0.pinMode(i, INPUT);
@@ -135,20 +160,6 @@ void setup() {
   mcp0.pinMode(0, INPUT); // Pin 21
   mcp1.pinMode(0, INPUT); // Pin 21
 
-  // changeMode(OUTPUT);
-  /*
-    while (true) {
-    mcp0.pinMode(1, OUTPUT);
-      Serial.println("Writing HIGH");
-      mcp0.digitalWrite(1, HIGH);
-      delay(5000);
-
-      mcp0.pinMode(1, INPUT);
-      Serial.println("Waiting for LOW");
-      while (mcp0.digitalRead(1) == HIGH);
-      Serial.println("Detected LOW");
-      delay(5000);
-    } */
   changeDataMode(OUTPUT);
   writeDataBus(0x00);
 }
@@ -163,28 +174,38 @@ void loop() {
 
   changeDataMode(INPUT);
 
-  uint16_t a = readAddressBus();
+  uint16_t address = readAddressBus();
 
   changeDataMode(OUTPUT);
 
-  // writeDataBus(0x00);
+  // if (digitalRead(RD) == LOW) { // Microprocessor is in read operation
+  //   byte b = readMemeory(address);
+  //
+  //   changeDataMode(OUTPUT);
+  //   writeDataBus(b);
+  // }
+  //
+  // if (digitalRead(WR) == LOW) {
+  //   byte b = readDataBus();
+  //   writeMemory(address, b);
+  // }
 
-  if (a == 0x00) {
-    writeDataBus(0xC3); // Unconditional JMP
+  Serial.printf("RD: %s\t WR: %s\n", digitalRead(RD) ? "HIGH" : "LOW", digitalRead(WR) ? "HIGH" : "LOW");
 
-  } else if (a == 0x01) {
+  if (address == 0x00) {
+    writeDataBus(0x00); // Unconditional JMP
+  } else if (address == 0x01) {
     writeDataBus(0x00);
 
-  } else if (a == 0x02) {
-    writeDataBus(0x10);
+  } else if (address == 0x02) {
+    writeDataBus(0x00);
 
   } else {
     writeDataBus(0x00);
   }
 
-
-  Serial.printf("count: 0x%.4X\t address: 0x%.4X         Diff: %d\n", count, a,
-                a - count);
+  Serial.printf("count: 0x%.4X\t address: 0x%.4X         Diff: %d\n", count,
+                address, address - count);
 
   digitalWrite(READY, HIGH); //  Indicate memory is ready to 8085
 
@@ -194,6 +215,6 @@ void loop() {
 
   digitalWrite(READY, LOW);
 
-  delay(100);
+  delay(1000);
   count++;
 }
