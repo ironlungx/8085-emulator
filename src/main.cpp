@@ -26,7 +26,13 @@ Adafruit_MCP23X17 mcp0;
 Adafruit_MCP23X17 mcp1;
 
 #define MEM_LEN 4096
-byte memory8085[MEM_LEN] = {0};
+byte memory8085[MEM_LEN] = {
+  0x26, 0x01, 
+  0x2E, 0x00,
+  0x36, 0xAA,
+  0x2C, 
+  0xC3, 0x04, 0x00
+};
 
 byte readMemeory(uint16_t address) {
   if (address > MEM_LEN) {
@@ -36,11 +42,12 @@ byte readMemeory(uint16_t address) {
     return memory8085[address];
   }
 }
+
 void writeMemory(uint16_t address, byte data) {
   if (address > MEM_LEN) {
     Serial.printf("Invalid writeAddress 0x%0.4X\n", address);
   } else {
-    Serial.printf("Writing data: 0x%.2X\t at 0x%.4X\n", data, address);
+    Serial.printf("Writing data: 0x%.2X\t at 0x%.4X", data, address);
     memory8085[address] = data;
   }
 }
@@ -178,34 +185,34 @@ void loop() {
 
   changeDataMode(OUTPUT);
 
-  // if (digitalRead(RD) == LOW) { // Microprocessor is in read operation
-  //   byte b = readMemeory(address);
-  //
-  //   changeDataMode(OUTPUT);
-  //   writeDataBus(b);
-  // }
-  //
-  // if (digitalRead(WR) == LOW) {
-  //   byte b = readDataBus();
-  //   writeMemory(address, b);
-  // }
+  if (digitalRead(RD) == LOW) { // Microprocessor is in read operation
+    byte b = readMemeory(address);
 
-  Serial.printf("RD: %s\t WR: %s\n", digitalRead(RD) ? "HIGH" : "LOW", digitalRead(WR) ? "HIGH" : "LOW");
-
-  if (address == 0x00) {
-    writeDataBus(0x00); // Unconditional JMP
-  } else if (address == 0x01) {
-    writeDataBus(0x00);
-
-  } else if (address == 0x02) {
-    writeDataBus(0x00);
-
-  } else {
-    writeDataBus(0x00);
+    changeDataMode(OUTPUT);
+    writeDataBus(b);
   }
 
-  Serial.printf("count: 0x%.4X\t address: 0x%.4X         Diff: %d\n", count,
-                address, address - count);
+  if (digitalRead(WR) == LOW) {
+    byte b = readDataBus();
+    writeMemory(address, b);
+  }
+
+  // Serial.printf("RD: %s\t WR: %s\n", digitalRead(RD) ? "HIGH" : "LOW", digitalRead(WR) ? "HIGH" : "LOW");
+
+  // if (address == 0x00) {
+  //   writeDataBus(0xC3); // Unconditional JMP
+  //
+  // } else if (address == 0x01) {
+  //   writeDataBus(0x00);
+  //
+  // } else if (address == 0x02) {
+  //   writeDataBus(0x10);
+  //
+  // } else {
+  //   writeDataBus(0x00);
+  // }
+
+  Serial.printf("\ncount: 0x%.4X\t address: 0x%.4X\t", count, address);
 
   digitalWrite(READY, HIGH); //  Indicate memory is ready to 8085
 
