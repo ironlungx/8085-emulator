@@ -32,6 +32,8 @@ byte memory8085[MEM_LEN] = {
   0x36, 0xAA,
   0x2C, 
   0xC3, 0x04, 0x00
+  // 0x00,
+  // 0xC3, 0x00, 0x00
 };
 
 byte readMemeory(uint16_t address) {
@@ -48,7 +50,7 @@ void writeMemory(uint16_t address, byte data) {
     Serial.printf("Invalid writeAddress 0x%0.4X\n", address);
   } else {
     Serial.printf("Writing data: 0x%.2X\t at 0x%.4X", data, address);
-    memory8085[address] = data;
+    // memory8085[address] = data;
   }
 }
 
